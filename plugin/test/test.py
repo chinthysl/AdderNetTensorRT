@@ -31,8 +31,8 @@ def get_adder2d_plugin():
 def test_plugin():
     with trt.Builder(TRT_LOGGER) as builder, builder.create_network() as network:
         builder.max_workspace_size = 2**20
-        input_layer = network.add_input(name="input_layer", dtype=trt.float32, shape=(10, 3, 32, 32))
-        adder_layer = network.add_plugin_v2(inputs=[input_layer], plugin=get_adder2d_plugin())
+        input_tensor = network.add_input(name="input_data", dtype=trt.float32, shape=(3, 32, 32))
+        adder_layer = network.add_plugin_v2(inputs=input_tensor, plugin=get_adder2d_plugin())
         adder_layer.get_output(0).name = "outputs"
         network.mark_output(adder_layer.get_output(0))
 
@@ -47,7 +47,7 @@ def has_adder2d_plugin():
         return False
 
 
-def get_adder2d_plugin(size, mode, align_corners):
+def get_adder2d_plugin_v2(size, mode, align_corners):
     if(has_adder2d_plugin()):
         PLUGIN_NAME = 'Adder2d_TRT'
         registry = trt.get_plugin_registry()
