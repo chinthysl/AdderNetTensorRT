@@ -132,10 +132,13 @@ nvinfer1::Dims Adder2dPlugin::getOutputDimensions(int index, const nvinfer1::Dim
         // CHW
         nvinfer1::Dims dimsOutput;
         dimsOutput.nbDims = inputs->nbDims;
-        dimsOutput.d[0] = inputs->d[0];
+        std::cout << "Input nbDims:" << inputs->nbDims << std::endl;
+        dimsOutput.d[0] = mNbFilters;
         dimsOutput.d[1] = (inputs->d[1] + 2 * mPadding - mFilterSize) / mStride + 1;
         dimsOutput.d[2] = (inputs->d[2] + 2 * mPadding - mFilterSize) / mStride + 1;
-        dimsOutput.d[3] = mNbFilters;
+
+        std::cout << "InputDimention:" << inputs->d[0] << "," << inputs->d[1] << "," <<  inputs->d[2] << std::endl;
+        std::cout << "getOutputDimensions:" << dimsOutput.d[0] << "," << dimsOutput.d[1] << "," <<  dimsOutput.d[2] << std::endl;
         return dimsOutput;
     } // else if(index == n) {
         // for other outputs if exists.
@@ -282,37 +285,56 @@ nvinfer1::IPluginV2* Adder2dPluginCreator::createPlugin(const char* name, const 
     int nbWeights, filterSize, nbFilters, stride, padding;
     std::vector<float> weightValues;
     const nvinfer1::PluginField* fields = fc->fields;
+
+    std::cout << "Size of char: " << sizeof(float) << " byte" << std::endl;
+    std::cout << "FieldType:kFlOAT32 - " << int(nvinfer1::PluginFieldType::kFLOAT32) << std::endl;
+    std::cout << "FieldType:kINT32 - " << int(nvinfer1::PluginFieldType::kINT32) << std::endl;
     for (int i=0; i<fc->nbFields; i++) {
         const char* attrName = fields[i].name;
-        if(strcmp(attrName, "weights")) {
+        std::cout << "FieldName:" << attrName << std::endl;
+        std::cout << "FieldType:" << int(fields[i].type) << std::endl;
+        std::cout << "FieldLength:" << int(fields[i].length) << std::endl;
+
+        if(strcmp(attrName, "weights") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kFLOAT32);
-            weightValues.reserve(fields[i].length);
             const auto* w = static_cast<const float*>(fields[i].data);
             for (int j = 0; j < weightValues.size(); j++)
             {
                 weightValues.push_back(*w);
                 w++;
             }
+
+            for (int j = 0; j < 20; j++)
+            {
+                std::cout << weightValues[j] << ",";
+            }
+            std::cout << std::endl;
+
         }
-        if(strcmp(attrName, "nbWeights")) {
+        if(strcmp(attrName, "nbWeights") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             nbWeights = *(static_cast<const int*>(fields[i].data));
+            std::cout  << "nbWeights:" << nbWeights << std::endl;
         }
-        if(strcmp(attrName, "filterSize")) {
+        if(strcmp(attrName, "filterSize") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             filterSize = *(static_cast<const int*>(fields[i].data));
+            std::cout  << "filterSize:" << filterSize << std::endl;
         }
-        if(strcmp(attrName, "nbFilters")) {
+        if(strcmp(attrName, "nbFilters") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             nbFilters = *(static_cast<const int*>(fields[i].data));
+            std::cout  << "nbFilters:" << nbFilters << std::endl;
         }
-        if(strcmp(attrName, "stride")) {
+        if(strcmp(attrName, "stride") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             stride = *(static_cast<const int*>(fields[i].data));
+            std::cout  << "stride:" << stride << std::endl;
         }
-        if(strcmp(attrName, "padding")) {
+        if(strcmp(attrName, "padding") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             padding = *(static_cast<const int*>(fields[i].data));
+            std::cout  << "padding:" << padding << std::endl;
         }
     }
     nvinfer1::Weights weights{nvinfer1::DataType::kFLOAT, weightValues.data(), (int64_t)weightValues.size()};
