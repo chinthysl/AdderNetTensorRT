@@ -9,7 +9,7 @@
 class Adder2dPlugin : public nvinfer1::IPluginV2
 {
 public:
-    Adder2dPlugin(const nvinfer1::Weights *weights, int nbWeights, int filterSize, int nbfilter, int stride, int padding);
+    Adder2dPlugin(const nvinfer1::Weights *weights, int nbWeights, int filterSize, int mNbFilters, int stride, int padding);
 
     Adder2dPlugin(const void *data, size_t length);
 
