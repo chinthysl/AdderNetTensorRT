@@ -10,69 +10,59 @@
 #include "Adder2dPlugin.h"
 
 
-//adder cuda kernel
-template <typename Ftype, unsigned int blockSize>
-__global__ void filterSum(int filterIdx,  int in_c, int in_h, int in_w, int filter_size, int n_filters; int stride, \
-                          int padding, const Ftype* input, Ftype* output, const Ftype* weights)
+template <typename Ftype>
+__global__ void adderFilter(int filterIdx, int in_c, int in_h, int in_w, int k, int stride, int padding,
+                            int out_h, int out_w, const Ftype* input, Ftype* output, const Ftype* weights)
 {
-    int out_h = (in_h + pad - size) / stride + 1;
-    int out_w = (in_w + pad - size) / stride + 1;
-    int out_c = n_filters;
-    int out_idx = out_h * out_w * filterIdx + blockIdx.x;
+    int tid_x = threadIdx.x + blockDim.x*blockIdx.x;
+    int tid_y = threadIdx.y + blockDim.y*blockIdx.y;
+    int tid = tid_y*k + tid_x;
 
-    extern __shared__ int sdata[];
+    int out_idx = out_h * out_w * filterIdx + tid;
+    output[out_idx] = 0;
 
-    int tid = threadIdx.x;
-    int blockid = blockIdx.x;
-
-    sdata[tid] = 0;
-
-    int tid_x = (tid % (filter_size*filterSize)) % filter_size;
-    int tid_y = (tid % (filter_size*filterSize)) / filter_size;
-    int tid_z = tid / (filter_size*filterSize);
-
-    int blockid_x = blockid % out_w;
-    int blockid_y = blockid / out_h;
-
-
-    Ftype input_val;
-    if((tid_x - padding)<0 |  (tid_y - padding)<0){
-        printf("tid:%d, block_idx:%d, tid_x:%d, tid_y:%d, tid_z:%d", tid, output_idx, tid_x, tid_y, tid_z);
-        input_val = 0;
-    }
-    else{
-        //selecting channel --> tid_z*(in_c*in_h)
-        //selecting location using blockid and stride --> (blockid_y*stride) +
-        int maped_input_idx = tid_z*(in_c*in_h) + (tid_y-padding)*in_w + (tid_x-padding);
-        input_val = input[mapping_input_idx];
-    }
-
-
-    int n_weights = filterSize * filterSize * out_c;
-    int weight_idx = n_weights*filterIdx + tid;
-
-    if(tid < n_weights)
+    int tot_outputs = in_c * in_h * in_w;
+    for(int a=0; a<in_c; a++)
     {
+        for(int i=0; i<k; i++)
+        {
+            for(int j=0; j<k; j++)
+            {
+                int val = 0;
+                int input_pos_y = tid_y*stride + i - k/2;
+                int input_pos_x = tid_x*stride + j - k/2;
+                int input_idx = a*(in_h*in_w) + input_pos_y*in_w + input_pos_x;
 
-        sdata[tid] += fabs(input_val - weights[weight_idx]);
+                if(input_pos_y>-1 && input_pos_y<in_h && input_pos_x>-1 && input_pos_x<in_w)
+                    val = input[input_idx];
+
+//                if(input_idx > -1 && input_idx < tot_outputs)
+//                {
+//                    val = input[input_idx];
+//                }
+//                printf("tid_x:%d, tid_y:%d, tid:%d, out_idx:%d, input_pos_y:%d, input_pos_x:%d, input_idx:%d, val:%d\n",
+//                        tid_x, tid_y, tid, out_idx, input_pos_y, input_pos_x, input_idx, val);
+                int weight_idx = filterIdx*k*k + i*k+j;
+                output[out_idx] += fabs(val - weights[weight_idx]);
+            }
+        }
     }
-    __syncthreads();
 
-    if (blockSize >= 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-    if (blockSize >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-    if (blockSize >= 128) { if (tid < 64) { sdata[tid] += sdata[tid + 64]; } __syncthreads(); }
+}
 
-    if (tid < 32)
+template <typename Dtype>
+void forwardGpu(int n_filters,int in_c, int in_h, int in_w, int k, int stride, int pad,
+                int out_h, int out_w, const Dtype* input, Dtype* output, const Dtype* weights)
+{
+    dim3 blkDim(out_w,out_h, 1);
+    dim3 gridDim(n_filters,1,1);
+
+    for(int i=0; i<n_filters; i++)
     {
-        if (blockSize >= 64) sdata[tid] += sdata[tid + 32];
-        if (blockSize >= 32) sdata[tid] += sdata[tid + 16];
-        if (blockSize >= 16) sdata[tid] += sdata[tid + 8];
-        if (blockSize >= 8) sdata[tid] += sdata[tid + 4];
-        if (blockSize >= 4) sdata[tid] += sdata[tid + 2];
-        if (blockSize >= 2) sdata[tid] += sdata[tid + 1];
+        adderFilter<<<gridDim, blkDim>>>(i, in_c, in_h, in_w, k, stride, pad, out_h, out_w, input, output, weights);
     }
 
-    if (tid == 0) output[out_idx] = -sdata[0];
+    CUDA_CHECK(cudaDeviceSynchronize());
 }
 
 // for consistency I recommend all plugin have same namesapce and version

@@ -21,20 +21,27 @@ __global__ void adderFilter(int filterIdx, int in_c, int in_h, int in_w, int k, 
     int out_idx = out_h * out_w * filterIdx + tid;
     output[out_idx] = 0;
 
-    int tot_outputs = in_c * in_h * in_w;
     for(int a=0; a<in_c; a++)
     {
         for(int i=0; i<k; i++)
         {
             for(int j=0; j<k; j++)
             {
-                int val = 0;
+                Ftype val;
                 int input_pos_y = tid_y*stride + i - k/2;
                 int input_pos_x = tid_x*stride + j - k/2;
                 int input_idx = a*(in_h*in_w) + input_pos_y*in_w + input_pos_x;
+//                val = input[input_idx];
 
-                if(input_pos_y>-1 && input_pos_y<in_h && input_pos_x>-1 && input_pos_x<in_w)
+                if(input_pos_y<0 || input_pos_y>in_h-1 || input_pos_x<0 || input_pos_x>in_w-1)
+                {
+                    val = 0.0;
+                }
+                else
+                {
                     val = input[input_idx];
+                }
+
 
 //                if(input_idx > -1 && input_idx < tot_outputs)
 //                {
@@ -42,7 +49,7 @@ __global__ void adderFilter(int filterIdx, int in_c, int in_h, int in_w, int k, 
 //                }
 //                printf("tid_x:%d, tid_y:%d, tid:%d, out_idx:%d, input_pos_y:%d, input_pos_x:%d, input_idx:%d, val:%d\n",
 //                        tid_x, tid_y, tid, out_idx, input_pos_y, input_pos_x, input_idx, val);
-                int weight_idx = filterIdx*k*k + i*k+j;
+                int weight_idx = filterIdx*in_c*k*k + a*k*k + i*k + j;
                 output[out_idx] += fabs(val - weights[weight_idx]);
             }
         }
@@ -111,20 +118,20 @@ int main()
 
     CUDA_CHECK(cudaMallocManaged(&in, in_c*in_h*in_w*sizeof(double)));
     CUDA_CHECK(cudaMallocManaged(&out, n_fil*out_h*out_w*sizeof(double)));
-    CUDA_CHECK(cudaMallocManaged(&fil, n_fil*k*k*sizeof(double)));
+    CUDA_CHECK(cudaMallocManaged(&fil, n_fil*in_c*k*k*sizeof(double)));
 
     for(int i=0; i<in_c*in_h*in_w; i++)
     {
         in[i] = 1;
     }
 
-    for(int i=0; i<in_c*k*k; i++)
+    for(int i=0; i<n_fil*in_c*k*k; i++)
     {
         fil[i] = 2;
     }
 
     printMatrix(in, in_c, in_h, in_w);
-    printMatrix(fil, n_fil, k, k);
+    printMatrix(fil, in_c, k, k);
 
     forwardGpu(n_fil, in_c, in_h, in_w, k, stride, pad, out_h, out_w, in, out, fil);
 
