@@ -9,7 +9,8 @@
 class Adder2dPlugin : public nvinfer1::IPluginV2
 {
 public:
-    Adder2dPlugin(const nvinfer1::Weights *weights, int nbWeights, int filterSize, int mNbFilters, int stride, int padding);
+    Adder2dPlugin(const nvinfer1::Weights *weights, int nbWeights, int nbInputChannels, int inputHeight,
+                  int inputWidth, int filterSize, int nbFilters, int stride, int padding);
 
     Adder2dPlugin(const void *data, size_t length);
 
@@ -50,10 +51,10 @@ public:
     virtual const char* getPluginNamespace() const override;
 
 private:
-    int mNbInputChannels, mNbInputHeight, mNbWeights, mNbInputWidth, mFilterSize, mNbFilters, mStride, mPadding;
+    int mNbWeights, mNbInputChannels, mInputHeight, mInputWidth, mFilterSize, mNbFilters, mStride, mPadding;
     nvinfer1::Weights mWeights;
     nvinfer1::DataType mDataType{nvinfer1::DataType::kFLOAT};
-//    void* mDeviceKernel{nullptr};
+    void* mDeviceWeightPtr{nullptr};
 };
 
 

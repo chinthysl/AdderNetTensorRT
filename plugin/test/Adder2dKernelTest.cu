@@ -11,12 +11,14 @@ using namespace std;
 
 
 template <typename Ftype>
-__global__ void adderFilter(int filterIdx, int in_c, int in_h, int in_w, int k, int stride, int padding,
+__global__ void adderFilter(int in_c, int in_h, int in_w, int k, int stride, int padding,
                             int out_h, int out_w, const Ftype* input, Ftype* output, const Ftype* weights)
 {
-    int tid_x = threadIdx.x + blockDim.x*blockIdx.x;
-    int tid_y = threadIdx.y + blockDim.y*blockIdx.y;
-    int tid = tid_y*k + tid_x;
+    int tid_x = threadIdx.x;
+    int tid_y = threadIdx.y;
+    int tid = tid_y*out_w + tid_x;
+
+    int filterIdx = blockIdx.x;
 
     int out_idx = out_h * out_w * filterIdx + tid;
     output[out_idx] = 0;
@@ -27,11 +29,10 @@ __global__ void adderFilter(int filterIdx, int in_c, int in_h, int in_w, int k, 
         {
             for(int j=0; j<k; j++)
             {
-                Ftype val;
+                int val;
                 int input_pos_y = tid_y*stride + i - k/2;
                 int input_pos_x = tid_x*stride + j - k/2;
                 int input_idx = a*(in_h*in_w) + input_pos_y*in_w + input_pos_x;
-//                val = input[input_idx];
 
                 if(input_pos_y<0 || input_pos_y>in_h-1 || input_pos_x<0 || input_pos_x>in_w-1)
                 {
@@ -42,19 +43,18 @@ __global__ void adderFilter(int filterIdx, int in_c, int in_h, int in_w, int k, 
                     val = input[input_idx];
                 }
 
-
 //                if(input_idx > -1 && input_idx < tot_outputs)
 //                {
 //                    val = input[input_idx];
 //                }
 //                printf("tid_x:%d, tid_y:%d, tid:%d, out_idx:%d, input_pos_y:%d, input_pos_x:%d, input_idx:%d, val:%d\n",
 //                        tid_x, tid_y, tid, out_idx, input_pos_y, input_pos_x, input_idx, val);
-                int weight_idx = filterIdx*in_c*k*k + a*k*k + i*k + j;
+
+                int weight_idx = filterIdx*in_c*k*k + a*k*k + i*k+ j;
                 output[out_idx] += fabs(val - weights[weight_idx]);
             }
         }
     }
-
 }
 
 template <typename Dtype>
@@ -64,10 +64,7 @@ void forwardGpu(int n_filters,int in_c, int in_h, int in_w, int k, int stride, i
     dim3 blkDim(out_w,out_h, 1);
     dim3 gridDim(n_filters,1,1);
 
-    for(int i=0; i<n_filters; i++)
-    {
-        adderFilter<<<gridDim, blkDim>>>(i, in_c, in_h, in_w, k, stride, pad, out_h, out_w, input, output, weights);
-    }
+    adderFilter<<<n_filters, blkDim>>>(in_c, in_h, in_w, k, stride, pad, out_h, out_w, input, output, weights);
 
     CUDA_CHECK(cudaDeviceSynchronize());
 }

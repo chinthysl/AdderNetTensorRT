@@ -22,7 +22,7 @@ trt.init_libnvinfer_plugins(TRT_LOGGER, '')
 PLUGIN_CREATORS = trt.get_plugin_registry().plugin_creator_list
 
 
-def get_adder2d_plugin(weights, nbWeights, filterSize, nbFilters, stride, padding):
+def get_adder2d_plugin(weights, nbWeights, nbInCh, nInH, nInW, filterSize, nbFilters, stride, padding):
     plugin = None
     plugin_name = "Adder2d_TRT"
     for plugin_creator in PLUGIN_CREATORS:
@@ -32,6 +32,9 @@ def get_adder2d_plugin(weights, nbWeights, filterSize, nbFilters, stride, paddin
             print(x[0:10])
             weight_field = trt.PluginField("weights", np.array(weights.flatten(), dtype=np.float32), trt.PluginFieldType.FLOAT32)
             nbWeights_field = trt.PluginField("nbWeights", np.array([nbWeights], dtype=np.int32), trt.PluginFieldType.INT32)
+            nbInCh_field = trt.PluginField("nbInputChannels", np.array([nbInCh], dtype=np.int32), trt.PluginFieldType.INT32)
+            nInH_field = trt.PluginField("nInputHeight", np.array([nInH], dtype=np.int32), trt.PluginFieldType.INT32)
+            nInW_field = trt.PluginField("nInputWidth", np.array([nInW], dtype=np.int32), trt.PluginFieldType.INT32)
             filterSize_field = trt.PluginField("filterSize", np.array([filterSize], dtype=np.int32), trt.PluginFieldType.INT32)
             nbFilters_field = trt.PluginField("nbFilters", np.array([nbFilters], dtype=np.int32), trt.PluginFieldType.INT32)
             stride_field = trt.PluginField("stride", np.array([stride], dtype=np.int32), trt.PluginFieldType.INT32)
@@ -70,7 +73,11 @@ def populate_network(network, weights):
     print(adder1_w[0, 0, 0, :], adder1_w[0, 0, 1, :])
     print(pool1.get_output(0).shape, pool1.get_output(0).location, "{0:b}".format(pool1.get_output(0).allowed_formats))
     print(pool1.get_output(0))
-    adder_plugin = get_adder2d_plugin(weights=adder1_w, nbWeights=adder1_w.size, filterSize=5, nbFilters=50, stride=1, padding=0)
+    in_ch = pool1.get_output(0).shape[0]
+    in_h = pool1.get_output(0).shape[1]
+    in_w = pool1.get_output(0).shape[2]
+    adder_plugin = get_adder2d_plugin(weights=adder1_w, nbWeights=adder1_w.size, nbInCh=in_ch, nInH=in_h, nInW=in_w,
+                                      filterSize=5, nbFilters=50, stride=1, padding=0)
     print(adder_plugin)
     adder1 = network.add_plugin_v2(inputs=[pool1.get_output(0)], plugin=adder_plugin)
     # ********************************************
