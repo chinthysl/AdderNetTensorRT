@@ -10,40 +10,70 @@
 #include "Adder2dPlugin.h"
 
 
-////adder cuda kernel
-//template <typename Ftype, unsigned int blockSize>
-//__global__ void filterSum(int *g_idata, int *g_odata, unsigned int n)
-//{
-//    extern __shared__ int sdata[];
-//    unsigned int tid = threadIdx.x;
-//    unsigned int i = blockIdx.x*(blockSize*2) + tid;
-//    unsigned int gridSize = blockSize*2*gridDim.x;
-//    sdata[tid] = 0;
-//
-//    while (i < n)
-//    {
-//        sdata[tid] += g_idata[i] + g_idata[i+blockSize];
-//        i += gridSize;
-//    }
-//
-//    __syncthreads();
-//
-//    if (blockSize >= 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-//    if (blockSize >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-//    if (blockSize >= 128) { if (tid < 64) { sdata[tid] += sdata[tid + 64]; } __syncthreads(); }
-//
-//    if (tid < 32)
-//    {
-//        if (blockSize >= 64) sdata[tid] += sdata[tid + 32];
-//        if (blockSize >= 32) sdata[tid] += sdata[tid + 16];
-//        if (blockSize >= 16) sdata[tid] += sdata[tid + 8];
-//        if (blockSize >= 8) sdata[tid] += sdata[tid + 4];
-//        if (blockSize >= 4) sdata[tid] += sdata[tid + 2];
-//        if (blockSize >= 2) sdata[tid] += sdata[tid + 1];
-//    }
-//
-//    if (tid == 0) g_odata[blockIdx.x] = sdata[0];
-//}
+//adder cuda kernel
+template <typename Ftype, unsigned int blockSize>
+__global__ void filterSum(int filterIdx,  int in_c, int in_h, int in_w, int filter_size, int n_filters; int stride, \
+                          int padding, const Ftype* input, Ftype* output, const Ftype* weights)
+{
+    int out_h = (in_h + pad - size) / stride + 1;
+    int out_w = (in_w + pad - size) / stride + 1;
+    int out_c = n_filters;
+    int out_idx = out_h * out_w * filterIdx + blockIdx.x;
+
+    extern __shared__ int sdata[];
+
+    int tid = threadIdx.x;
+    int blockid = blockIdx.x;
+
+    sdata[tid] = 0;
+
+    int tid_x = (tid % (filter_size*filterSize)) % filter_size;
+    int tid_y = (tid % (filter_size*filterSize)) / filter_size;
+    int tid_z = tid / (filter_size*filterSize);
+
+    int blockid_x = blockid % out_w;
+    int blockid_y = blockid / out_h;
+
+
+    Ftype input_val;
+    if((tid_x - padding)<0 |  (tid_y - padding)<0){
+        printf("tid:%d, block_idx:%d, tid_x:%d, tid_y:%d, tid_z:%d", tid, output_idx, tid_x, tid_y, tid_z);
+        input_val = 0;
+    }
+    else{
+        //selecting channel --> tid_z*(in_c*in_h)
+        //selecting location using blockid and stride --> (blockid_y*stride) +
+        int maped_input_idx = tid_z*(in_c*in_h) + (tid_y-padding)*in_w + (tid_x-padding);
+        input_val = input[mapping_input_idx];
+    }
+
+
+    int n_weights = filterSize * filterSize * out_c;
+    int weight_idx = n_weights*filterIdx + tid;
+
+    if(tid < n_weights)
+    {
+
+        sdata[tid] += fabs(input_val - weights[weight_idx]);
+    }
+    __syncthreads();
+
+    if (blockSize >= 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+    if (blockSize >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+    if (blockSize >= 128) { if (tid < 64) { sdata[tid] += sdata[tid + 64]; } __syncthreads(); }
+
+    if (tid < 32)
+    {
+        if (blockSize >= 64) sdata[tid] += sdata[tid + 32];
+        if (blockSize >= 32) sdata[tid] += sdata[tid + 16];
+        if (blockSize >= 16) sdata[tid] += sdata[tid + 8];
+        if (blockSize >= 8) sdata[tid] += sdata[tid + 4];
+        if (blockSize >= 4) sdata[tid] += sdata[tid + 2];
+        if (blockSize >= 2) sdata[tid] += sdata[tid + 1];
+    }
+
+    if (tid == 0) output[out_idx] = -sdata[0];
+}
 
 // for consistency I recommend all plugin have same namesapce and version
 const char* G_PLUGIN_NAMESPACE = "_TRT";

@@ -51,6 +51,7 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 # set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib CACHE PATH "")
 option(BUILD_PYTHON "compile python api" ON)
 option(BUILD_TEST "compile test" ON)
+option(BUILD_KERNEL_TEST "compile test" ON)
 
 find_package(CUDA REQUIRED)
 
@@ -97,6 +98,7 @@ message(STATUS "
 Generated gencode flags: ${CUDA_gencode_flags}
 BUILD_PYTHON : ${BUILD_PYTHON}
 BUILD_TEST : ${BUILD_TEST}
+BUILD_KERNEL_TEST : ${BUILD_KERNEL_TEST}
 ENABLE_ADDER2D_FP16 : ${ENABLE_PRELU_FP16}
 ")
 
@@ -122,6 +124,15 @@ if(BUILD_TEST)
   target_link_libraries(unit_test nvonnxparser)
   target_link_libraries(unit_test nvcaffe_parser)
   target_link_libraries(unit_test ${CUDART})
+endif()
+
+if(BUILD_KERNEL_TEST)
+  file(GLOB kernel_source
+      test/Adder2dKernelTest.cu
+      )
+  cuda_add_executable(kernel_test ${kernel_source})
+  target_compile_options(kernel_test PUBLIC -std=c++11 -Wall -Wfloat-conversion)
+  target_link_libraries(kernel_test ${CUDART})
 endif()
 
 if(BUILD_PYTHON)
