@@ -364,8 +364,8 @@ nvinfer1::IPluginV2* Adder2dPluginCreator::createPlugin(const char* name, const 
         }
     }
     nvinfer1::Weights weights{nvinfer1::DataType::kFLOAT, weightValues.data(), (int64_t)weightValues.size()};
-    return new Adder2dPlugin(&weights, nbWeights, filterSize, nbInputChannels, inputHeight, inputWidth,
-                             nbFilters, stride, padding);
+    return new Adder2dPlugin(&weights, nbWeights, nbInputChannels, inputHeight, inputWidth,
+                             filterSize, nbFilters, stride, padding);
 }
 
 // deserialization plugin implementation

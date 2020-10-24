@@ -41,6 +41,7 @@ def get_adder2d_plugin(weights, nbWeights, nbInCh, nInH, nInW, filterSize, nbFil
             padding_field = trt.PluginField("padding", np.array([padding], dtype=np.int32), trt.PluginFieldType.INT32)
 
             field_collection = trt.PluginFieldCollection([weight_field, nbWeights_field, filterSize_field,
+                                                          nbInCh_field, nInH_field, nInW_field,
                                                           nbFilters_field, stride_field, padding_field])
             plugin = plugin_creator.create_plugin(name=plugin_name, field_collection=field_collection)
     return plugin
@@ -76,6 +77,7 @@ def populate_network(network, weights):
     in_ch = pool1.get_output(0).shape[0]
     in_h = pool1.get_output(0).shape[1]
     in_w = pool1.get_output(0).shape[2]
+    print("in_ch:", in_ch)
     adder_plugin = get_adder2d_plugin(weights=adder1_w, nbWeights=adder1_w.size, nbInCh=in_ch, nInH=in_h, nInW=in_w,
                                       filterSize=5, nbFilters=50, stride=1, padding=0)
     print(adder_plugin)
