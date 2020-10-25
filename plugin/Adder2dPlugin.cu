@@ -28,8 +28,14 @@ __global__ void AdderFilter(int in_c, int in_h, int in_w, int k, int stride, int
             for(int j=0; j<k; j++)
             {
                 Ftype val;
-                int input_pos_y = tid_y*stride + i - k/2;
-                int input_pos_x = tid_x*stride + j - k/2;
+
+                int shift = k/2;
+                if(padding==0)
+                {
+                    shift = 0;
+                }
+                int input_pos_y = tid_y*stride + i - shift;
+                int input_pos_x = tid_x*stride + j - shift;
                 int input_idx = a*(in_h*in_w) + input_pos_y*in_w + input_pos_x;
 
                 if(input_pos_y<0 || input_pos_y>in_h-1 || input_pos_x<0 || input_pos_x>in_w-1)
@@ -51,18 +57,30 @@ __global__ void AdderFilter(int in_c, int in_h, int in_w, int k, int stride, int
     }
 }
 
+template <typename Ftype>
+__global__ void MakeOutputNegative(int elements, Ftype* output)
+{
+    int tid = threadIdx.x + blockIdx.x*blockDim.x;
+
+    if(tid < elements)
+    {
+        output[tid] = -output[tid];
+    }
+}
+
 template <typename Dtype>
 cudaError_t ForwardGpu(int n_filters,int in_c, int in_h, int in_w, int k, int stride, int pad,
                        const Dtype* input, Dtype* output, const Dtype* weights, const cudaStream_t stream)
 {
     int out_h = (in_h + 2*pad - k) / stride + 1;
     int out_w = (in_w + 2*pad - k) / stride + 1;
+    int nOutElements =  n_filters * out_h * out_w;
 
     dim3 blkDim(out_w,out_h, 1);
     dim3 gridDim(n_filters,1,1);
 
     AdderFilter<<<n_filters, blkDim, 0, stream>>>(in_c, in_h, in_w, k, stride, pad, out_h, out_w, input, output, weights);
-
+    MakeOutputNegative<<<nOutElements/256+1, 256, 0, stream>>>(nOutElements, output);
     cudaError_t err = cudaGetLastError();
     return err;
 }
