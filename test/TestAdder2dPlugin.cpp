@@ -23,5 +23,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Adder2dPlugin Obj Deleted" << std::endl;
 
+    std::cout << "Creating Adder2dPlugin using c++ is successful" << std::endl;
+
     return 0;
 }

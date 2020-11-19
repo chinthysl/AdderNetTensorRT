@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 
-import numpy as np
 import sys
-sys.path.append("../../")
+sys.path.append("../")
 import adder
 
 
@@ -29,12 +28,16 @@ def print_feature_map(feature_array, c):
 def main():
     adder_model = SingleAdder()
     weights = adder_model.get_weights()
+    print("####Testing the output of PyTorch implementation of the Adder Layer###")
+    print("####Adder Filter Weights####")
     print(weights['adder1.adder'].numpy())
 
     input = torch.empty(1, 5, 5, 5)
     input.fill_(1)
+    print("####Input Feature Map####")
     print_feature_map(input.numpy(), 5)
     output = adder_model.forward(input)
+    print("####Output Feature Map####")
     print_feature_map(output.detach().numpy(), 5)
 
 

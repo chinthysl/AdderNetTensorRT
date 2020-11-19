@@ -10,6 +10,7 @@
 using namespace std;
 
 
+// simple implementation of adder filter
 template <typename Ftype>
 __global__ void adderFilter(int in_c, int in_h, int in_w, int k, int stride, int padding,
                             int out_h, int out_w, const Ftype* input, Ftype* output, const Ftype* weights)
@@ -42,13 +43,6 @@ __global__ void adderFilter(int in_c, int in_h, int in_w, int k, int stride, int
                 {
                     val = input[input_idx];
                 }
-
-//                if(input_idx > -1 && input_idx < tot_outputs)
-//                {
-//                    val = input[input_idx];
-//                }
-//                printf("tid_x:%d, tid_y:%d, tid:%d, out_idx:%d, input_pos_y:%d, input_pos_x:%d, input_idx:%d, val:%d\n",
-//                        tid_x, tid_y, tid, out_idx, input_pos_y, input_pos_x, input_idx, val);
 
                 int weight_idx = filterIdx*in_c*k*k + a*k*k + i*k+ j;
                 output[out_idx] += fabs(val - weights[weight_idx]);
@@ -124,15 +118,26 @@ int main()
 
     for(int i=0; i<n_fil*in_c*k*k; i++)
     {
-        fil[i] = 2;
+        fil[i] = 1;
     }
 
+    cout << "######Input Feature Map, Size=(5,5,5)######" << endl;
     printMatrix(in, in_c, in_h, in_w);
+    cout << endl;
+
+
+    cout << "######Weights of One Adder Filter, Size=(5,3,3)######" << endl;
     printMatrix(fil, in_c, k, k);
+    cout << endl;
 
     forwardGpu(n_fil, in_c, in_h, in_w, k, stride, pad, out_h, out_w, in, out, fil);
 
+    cout << "######Padding=1, Stride=1#####" << endl;
+    cout << "######Output Feature Map######" << endl;
     printMatrix(out, n_fil, out_h, out_w);
+    cout << endl;
+
+    cout << "Successfully tested the AdderFilter cuda kernel" << endl;
 
     return 0;
 

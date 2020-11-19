@@ -1,5 +1,5 @@
 import sys
-sys.path.append("../build")
+sys.path.append("../plugin/build")
 from adder2dpytrt import Adder2dPlugin
 
 import tensorrt as trt
