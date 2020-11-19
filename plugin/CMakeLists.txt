@@ -40,7 +40,7 @@ message(STATUS "
 
 message(STATUS "
   =============> USAGE <===============
-  cmake -DENABLE_ADDER2D_FP16=ON/OFF -DSM_VERSION=xx -DBUILD_PYTHON=ON/OFF -DBUILD_TEST=ON/OFF ..
+  cmake -DENABLE_ADDER2D_FP16=ON/OFF -DSM_VERSION=xx -DBUILD_PYTHON=ON/OFF -DBUILD_TEST=ON/OFF -DBUILD_KERNEL_TEST=ON/OFF ..
   =====================================
 ")
 
@@ -50,8 +50,8 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 
 # set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib CACHE PATH "")
 option(BUILD_PYTHON "compile python api" ON)
-option(BUILD_TEST "compile test" ON)
-option(BUILD_KERNEL_TEST "compile test" ON)
+option(BUILD_TEST "compile plugin test" ON)
+option(BUILD_KERNEL_TEST "compile cuda kernel test" ON)
 
 find_package(CUDA REQUIRED)
 
@@ -99,7 +99,7 @@ Generated gencode flags: ${CUDA_gencode_flags}
 BUILD_PYTHON : ${BUILD_PYTHON}
 BUILD_TEST : ${BUILD_TEST}
 BUILD_KERNEL_TEST : ${BUILD_KERNEL_TEST}
-ENABLE_ADDER2D_FP16 : ${ENABLE_PRELU_FP16}
+ENABLE_ADDER2D_FP16 : ${ENABLE_ADDER2D_FP16}
 ")
 
 
@@ -113,26 +113,26 @@ set_target_properties(adder2dtrt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(BUILD_TEST)
   file(GLOB test_source
-      test/test.cpp
+      ../test/TestAdder2dPlugin.cpp
       )
-  add_executable(unit_test ${test_source})
-  target_compile_options(unit_test PUBLIC -std=c++11 -Wall -Wfloat-conversion)
-  target_link_libraries(unit_test adder2dtrt)
-  target_link_libraries(unit_test nvinfer)
-  target_link_libraries(unit_test nvinfer_plugin)
-  target_link_libraries(unit_test nvparsers)
-  target_link_libraries(unit_test nvonnxparser)
-  target_link_libraries(unit_test nvcaffe_parser)
-  target_link_libraries(unit_test ${CUDART})
+  add_executable(TestAdder2dPlugin ${test_source})
+  target_compile_options(TestAdder2dPlugin PUBLIC -std=c++11 -Wall -Wfloat-conversion)
+  target_link_libraries(TestAdder2dPlugin adder2dtrt)
+  target_link_libraries(TestAdder2dPlugin nvinfer)
+  target_link_libraries(TestAdder2dPlugin nvinfer_plugin)
+  target_link_libraries(TestAdder2dPlugin nvparsers)
+  target_link_libraries(TestAdder2dPlugin nvonnxparser)
+  target_link_libraries(TestAdder2dPlugin nvcaffe_parser)
+  target_link_libraries(TestAdder2dPlugin ${CUDART})
 endif()
 
 if(BUILD_KERNEL_TEST)
   file(GLOB kernel_source
-      test/Adder2dKernelTest.cu
+      ../test/TestAdderFilterCudaKernel.cu
       )
-  cuda_add_executable(kernel_test ${kernel_source})
-  target_compile_options(kernel_test PUBLIC -std=c++11 -Wall -Wfloat-conversion)
-  target_link_libraries(kernel_test ${CUDART})
+  cuda_add_executable(TestAdderFilterCudaKernel ${kernel_source})
+  target_compile_options(TestAdderFilterCudaKernel PUBLIC -std=c++11 -Wall -Wfloat-conversion)
+  target_link_libraries(TestAdderFilterCudaKernel ${CUDART})
 endif()
 
 if(BUILD_PYTHON)
