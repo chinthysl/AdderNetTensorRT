@@ -10,6 +10,7 @@
 #include "Adder2dPlugin.h"
 
 
+//cuda kernel of the Adder Filter
 template <typename Ftype>
 __global__ void AdderFilter(int in_c, int in_h, int in_w, int k, int stride, int padding,
                             int out_h, int out_w, const Ftype* input, Ftype* output, const Ftype* weights)
@@ -57,6 +58,7 @@ __global__ void AdderFilter(int in_c, int in_h, int in_w, int k, int stride, int
     }
 }
 
+//cuda kernel to make values zero
 template <typename Ftype>
 __global__ void MakeOutputNegative(int elements, Ftype* output)
 {
@@ -175,14 +177,14 @@ nvinfer1::Dims Adder2dPlugin::getOutputDimensions(int index, const nvinfer1::Dim
         // CHW
         nvinfer1::Dims dimsOutput;
         dimsOutput.nbDims = inputs->nbDims;
-        std::cout << "Input nbDims:" << inputs->nbDims << std::endl;
+//        std::cout << "Input nbDims:" << inputs->nbDims << std::endl;
         dimsOutput.d[0] = mNbFilters;
         dimsOutput.d[1] = (inputs->d[1] + 2 * mPadding - mFilterSize) / mStride + 1;
         dimsOutput.d[2] = (inputs->d[2] + 2 * mPadding - mFilterSize) / mStride + 1;
 
-        std::cout << "mPadding:" << mPadding << ",mFilterSize:" << mFilterSize << ",mStride:" << mStride << std::endl;
-        std::cout << "InputDimention:" << inputs->d[0] << "," << inputs->d[1] << "," <<  inputs->d[2] << std::endl;
-        std::cout << "getOutputDimensions:" << dimsOutput.d[0] << "," << dimsOutput.d[1] << "," <<  dimsOutput.d[2] << std::endl;
+//        std::cout << "mPadding:" << mPadding << ",mFilterSize:" << mFilterSize << ",mStride:" << mStride << std::endl;
+//        std::cout << "InputDimention:" << inputs->d[0] << "," << inputs->d[1] << "," <<  inputs->d[2] << std::endl;
+//        std::cout << "getOutputDimensions:" << dimsOutput.d[0] << "," << dimsOutput.d[1] << "," <<  dimsOutput.d[2] << std::endl;
         return dimsOutput;
     } // else if(index == n) {
         // for other outputs if exists.
@@ -317,13 +319,13 @@ nvinfer1::IPluginV2* Adder2dPluginCreator::createPlugin(const char* name, const 
     std::vector<float> weightValues;
     const nvinfer1::PluginField* fields = fc->fields;
 
-    std::cout << "FieldType:kFlOAT32 - " << int(nvinfer1::PluginFieldType::kFLOAT32) << std::endl;
-    std::cout << "FieldType:kINT32 - " << int(nvinfer1::PluginFieldType::kINT32) << std::endl;
+//    std::cout << "FieldType:kFlOAT32 - " << int(nvinfer1::PluginFieldType::kFLOAT32) << std::endl;
+//    std::cout << "FieldType:kINT32 - " << int(nvinfer1::PluginFieldType::kINT32) << std::endl;
     for (int i=0; i<fc->nbFields; i++) {
         const char* attrName = fields[i].name;
-        std::cout << "FieldName:" << attrName << std::endl;
-        std::cout << "FieldType:" << int(fields[i].type) << std::endl;
-        std::cout << "FieldLength:" << int(fields[i].length) << std::endl;
+//        std::cout << "FieldName:" << attrName << std::endl;
+//        std::cout << "FieldType:" << int(fields[i].type) << std::endl;
+//        std::cout << "FieldLength:" << int(fields[i].length) << std::endl;
 
         if(strcmp(attrName, "weights") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kFLOAT32);
@@ -343,42 +345,42 @@ nvinfer1::IPluginV2* Adder2dPluginCreator::createPlugin(const char* name, const 
         if(strcmp(attrName, "nbWeights") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             nbWeights = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "nbWeights:" << nbWeights << std::endl;
+//            std::cout  << "nbWeights:" << nbWeights << std::endl;
         }
         if(strcmp(attrName, "filterSize") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             filterSize = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "filterSize:" << filterSize << std::endl;
+//            std::cout  << "filterSize:" << filterSize << std::endl;
         }
         if(strcmp(attrName, "nbInputChannels") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             nbInputChannels = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "nbInputChannels:" << nbInputChannels << std::endl;
+//            std::cout  << "nbInputChannels:" << nbInputChannels << std::endl;
         }
         if(strcmp(attrName, "inputHeight") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             inputHeight = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "inputHeight:" << inputHeight << std::endl;
+//            std::cout  << "inputHeight:" << inputHeight << std::endl;
         }
         if(strcmp(attrName, "inputWeight") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             inputWidth = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "inputWidth:" << inputWidth << std::endl;
+//            std::cout  << "inputWidth:" << inputWidth << std::endl;
         }
         if(strcmp(attrName, "nbFilters") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             nbFilters = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "nbFilters:" << nbFilters << std::endl;
+//            std::cout  << "nbFilters:" << nbFilters << std::endl;
         }
         if(strcmp(attrName, "stride") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             stride = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "stride:" << stride << std::endl;
+//            std::cout  << "stride:" << stride << std::endl;
         }
         if(strcmp(attrName, "padding") == 0) {
             ASSERT(fields[i].type == nvinfer1::PluginFieldType::kINT32);
             padding = *(static_cast<const int*>(fields[i].data));
-            std::cout  << "padding:" << padding << std::endl;
+//            std::cout  << "padding:" << padding << std::endl;
         }
     }
     nvinfer1::Weights weights{nvinfer1::DataType::kFLOAT, weightValues.data(), (int64_t)weightValues.size()};
